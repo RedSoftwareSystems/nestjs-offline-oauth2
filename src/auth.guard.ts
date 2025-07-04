@@ -4,7 +4,6 @@ import {
   ExecutionContext,
   Injectable,
   Logger,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Roles } from './auth.decorators';
@@ -27,16 +26,9 @@ export class AuthGuard implements CanActivate {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-    const { pemCert, alg, rolesMapping } = this.options;
+    // const { pemCert, alg, rolesMapping } = this.options;
     const ctx = context.switchToHttp();
     const request = ctx.getRequest<Request>();
-    const accessToken = request
-      .header('authorization')
-      ?.replace(/^Bearer\s+/i, '');
-
-    if (!accessToken) {
-      throw new UnauthorizedException('Authorization header is missing');
-    }
 
     const roles: string[] | undefined = this.reflector.get(
       Roles,
@@ -48,12 +40,7 @@ export class AuthGuard implements CanActivate {
     }
 
     try {
-      const token = verify(accessToken, pemCert, {
-        algorithms: [alg],
-      });
-      const grp: string[] =
-        ((token as JwtPayload)?.[rolesMapping] as unknown as string[]) || [];
-
+      const grp = this.getUserGroups(request);
       const anyRoleMatch = grp.find((tokenRole) =>
         roles.find((allowedRole) => allowedRole === tokenRole),
       );
@@ -62,5 +49,22 @@ export class AuthGuard implements CanActivate {
       this.logger.warn((error as Error).message);
       return false;
     }
+  }
+  public getUserGroups(request: Request): string[] {
+    const { pemCert, alg, rolesMapping } = this.options;
+    const accessToken = request
+      .header('authorization')
+      ?.replace(/^Bearer\s+/i, '');
+
+    if (!accessToken) {
+      return [];
+    }
+
+    const token = verify(accessToken, pemCert, {
+      algorithms: [alg],
+    });
+    const grp: string[] =
+      ((token as JwtPayload)?.[rolesMapping] as unknown as string[]) || [];
+    return grp;
   }
 }
