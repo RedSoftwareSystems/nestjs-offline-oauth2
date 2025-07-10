@@ -51,20 +51,24 @@ export class AuthGuard implements CanActivate {
     }
   }
   public getUserGroups(request: Request): string[] {
-    const { pemCert, alg, rolesMapping } = this.options;
+    const { rolesMapping } = this.options;
+    const token = this.getJwtPayload(request);
+    const grp: string[] = (token?.[rolesMapping] as unknown as string[]) || [];
+    return grp;
+  }
+
+  public getJwtPayload(request: Request): JwtPayload | undefined {
+    const { pemCert, alg } = this.options;
     const accessToken = request
       .header('authorization')
       ?.replace(/^Bearer\s+/i, '');
 
     if (!accessToken) {
-      return [];
+      return;
     }
 
-    const token = verify(accessToken, pemCert, {
+    return verify(accessToken, pemCert, {
       algorithms: [alg],
-    });
-    const grp: string[] =
-      ((token as JwtPayload)?.[rolesMapping] as unknown as string[]) || [];
-    return grp;
+    }) as JwtPayload;
   }
 }
