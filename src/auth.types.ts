@@ -1,5 +1,6 @@
 export type AuthOptions = {
-  authProvider: string;
+  authProvider?: string;
+  jwksUri?: string;
   realm: string;
   rolesMapping: string;
 };

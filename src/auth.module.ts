@@ -43,10 +43,15 @@ export class AuthModule {
         {
           provide: 'JwtGuard',
           useFactory: async (reflector: Reflector) => {
-            const { rolesMapping, authProvider, realm } = options;
-            const oidc = await getOpenIdConfiguration(authProvider, realm);
+            const { rolesMapping, authProvider, realm, jwksUri } = options;
+            let jwks_uri = jwksUri;
 
-            const jwks = await getJwks(oidc.jwks_uri);
+            if (!jwks_uri) {
+              const oidc = await getOpenIdConfiguration(authProvider!, realm);
+              jwks_uri = oidc.jwks_uri;
+            }
+
+            const jwks = await getJwks(jwks_uri);
 
             const sigKey = jwks.keys.find((item) => item.use === 'sig');
             const x5cArray = sigKey?.x5c || [];
