@@ -4,6 +4,7 @@ import {
   ExecutionContext,
   Injectable,
   Logger,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Roles } from './auth.decorators';
@@ -46,8 +47,7 @@ export class AuthGuard implements CanActivate {
       );
       return !!anyRoleMatch;
     } catch (error: unknown) {
-      this.logger.warn((error as Error).message);
-      return false;
+      throw new UnauthorizedException(error);
     }
   }
   public getUserGroups(request: Request): string[] {
